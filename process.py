@@ -77,7 +77,7 @@ def sample__plot_image():
 
 
 """
-   Training Process !
+   Training 
 """
 from torch.optim import Adam
 

@@ -5,7 +5,6 @@ import torch.nn as nn
 """
    For later time embeddings
 """
-
 class SinusoidalPositionEmbedding(nn.Module):
     def __init__(self, dim):
         super().__init__()
@@ -27,24 +26,32 @@ class Block(nn.Module):
 
     def __init__(self, in_ch, out_ch, time_emb_dim, up=False):
         super().__init__()
+
+        # MLP for transforming time_emb_dim to out_ch dim for time processing
         self.time_mlp = nn.Linear(time_emb_dim, out_ch)
+
+        # "Decoder block":
+        # The input is concatenated with corresponding residual input + transformed for doubled resolution
         if up:
             self.conv1 = nn.Conv2d(2*in_ch, out_ch, kernel_size=3, padding=1)
             self.transform = nn.ConvTranspose2d(out_ch, out_ch, kernel_size=4, stride=2, padding=1)
+        # "Encoder block":
+        # The input is convolutioned two times with halved resolution
         else:
             self.conv1 = nn.Conv2d(in_ch, out_ch, kernel_size=3, padding=1)
             self.transform = nn.Conv2d(out_ch, out_ch, kernel_size=4, stride=2, padding=1)
+        # Other processes of the block
         self.conv2 = nn.Conv2d(out_ch, out_ch, kernel_size=3, padding=1)
         self.pool = nn.MaxPool2d(kernel_size=3, stride=2)
         self.bnorm = nn.BatchNorm2d(out_ch)
         self.relu = nn.ReLU()
 
     def forward(self, x, t, ):
-        # First Conv.
+        # First input conv. with relu activation and batch normalization
         h = self.bnorm(self.relu(self.conv1(x)))
-        # Time embedding
+        # Passing time information of input through the time mlp for transforming and relu activation
         time_emb = self.relu(self.time_mlp(t))
-        # Extended last 2 dimensions
+        # Extended last 2 dimension of the time_emb
         time_emb = time_emb[(..., ) + (None, ) * 2]
         # Add time channels
         h = h + time_emb
@@ -56,13 +63,12 @@ class Block(nn.Module):
 """
    First implementation of a simple UNet structure 
 """
-
 class SimpleUNet(nn.Module):
 
     def __init__(self):
         super().__init__()
 
-        # TODO: Input channels 32??? Pro Sample aber nur eine Eingabe!!!
+        # Model Parameters
         input_channels = 1
         encoder_channels = (64, 128, 256)
         decoder_channels = (256, 128, 64)
@@ -76,7 +82,7 @@ class SimpleUNet(nn.Module):
             nn.ReLU()
         )
 
-        # Input
+        # Input-Layer
         self.input = nn.Conv2d(input_channels, encoder_channels[0], kernel_size=3, padding=1)
 
         # Encoder Part
@@ -88,15 +94,15 @@ class SimpleUNet(nn.Module):
                                             time_emb_dim, up=True)
                                       for i in range(len(decoder_channels) - 1)])
 
-        # Output
+        # Output-Layer
         self.output = nn.Conv2d(decoder_channels[-1], 1, output_channels)
 
     def forward(self, x, timestep):
-        # Embedded time
+        # Embedding given time
         t = self.time_mlp(timestep)
         # Input convolution
         x = self.input(x)
-        # For later concatenating when decoding
+        # For later concatenating in the decoder part
         residual_inputs = []
         # Encoding pass
         for block in self.encoder:
@@ -108,6 +114,7 @@ class SimpleUNet(nn.Module):
             # Add residual x as additional channels
             x = torch.cat((x, residual_x), dim=1)
             x = block(x, t)
+        # Return output convolution
         return self.output(x)
 
 model = SimpleUNet()
