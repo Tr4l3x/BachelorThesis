@@ -297,3 +297,16 @@ def get_dataloader():
     dataset = TensorDataset(data_tensors)
     dataloader = DataLoader(dataset, batch_size=32, shuffle=True, num_workers=0)
     return dataloader
+
+### Test case
+data = get_dataset()
+all_chords = set()
+for sample in data.notes_of_each_sample:
+    for note in sample:
+        all_chords.add(note[-1])
+all_chords = set(all_chords)
+sorted_list = sorted(all_chords, key=lambda x: x[0])
+print(sorted_list)
+
+# Notation besser verstehen
+# https://jazzomat.hfm-weimar.de/melospy/annotations.html?highlight=notation
