@@ -1,0 +1,1 @@
+print("Hallo Lukas. Du hast ein Python-Script auf dem Remote PC ausgeführt. Glückwunsch!")
