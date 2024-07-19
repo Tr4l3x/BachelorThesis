@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 
 """
-   For later time embeddings
+    For later time_embeddings
 """
 class SinusoidalPositionEmbedding(nn.Module):
     def __init__(self, dim):
@@ -20,7 +20,13 @@ class SinusoidalPositionEmbedding(nn.Module):
         return embeddings
 
 """
-   Block implementation for the UNet 
+    Implementation of the blocks used in the UNet structure.
+    
+    Depending on they are used in the en- or decoder, the blocks has different transforming outputs
+    When up is true, the block is used in the decoder part, so the final transforming is doubling the input resolution.
+    The decoder blocks are also fed with the residual inputs from the corresponding encoder part, so the input shape is
+    also doubled (along dim 1)
+    Otherwise the block is used in the encoder part, so the final transforming is halving the input resolution.
 """
 class Block(nn.Module):
 
@@ -61,7 +67,9 @@ class Block(nn.Module):
         return self.transform(h)
 
 """
-   First implementation of a simple UNet structure 
+    First and simple UNet structure for testing the pipeline and model (will later be updated and modified)
+    
+    At this point the UNet Structure has 3 levels. For channel sized see following attributes.
 """
 class SimpleUNet(nn.Module):
 
