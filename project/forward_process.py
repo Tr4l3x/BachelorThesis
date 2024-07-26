@@ -19,7 +19,6 @@ def forward_diffusion_sample(x_0, t, device="cpu"):
     sqrt_one_minus_alphas_cumprod_t = get_index_from_list(
         sqrt_one_minus_alphas_cumprod, t, x_0.shape
     )
-
     # mean + variance
     return sqrt_alphas_cumprod_t.to(device) * x_0.to(device) \
     + sqrt_one_minus_alphas_cumprod_t.to(device) * noise.to(device), noise.to(device)

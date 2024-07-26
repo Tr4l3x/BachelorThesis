@@ -1,27 +1,10 @@
-import math
 import torch
 import torch.nn as nn
-
-"""
-    For later time_embeddings
-"""
-class SinusoidalPositionEmbedding(nn.Module):
-    def __init__(self, dim):
-        super().__init__()
-        self.dim = dim
-
-    def forward(self, time):
-        device = time.device
-        half_dim = self.dim // 2
-        embeddings = math.log(10000) / (half_dim-1)
-        embeddings = torch.exp(torch.arange(half_dim, device=device) * -embeddings)
-        embeddings = time[:, None] * embeddings[None, :]
-        embeddings = torch.cat((embeddings.sin(), embeddings.cos()), dim=-1)
-        return embeddings
+import project.network.time_embedding as time_embedding
 
 """
     Implementation of the blocks used in the UNet structure.
-    
+
     Depending on they are used in the en- or decoder, the blocks has different transforming outputs
     When up is true, the block is used in the decoder part, so the final transforming is doubling the input resolution.
     The decoder blocks are also fed with the residual inputs from the corresponding encoder part, so the input shape is
@@ -39,7 +22,7 @@ class Block(nn.Module):
         # "Decoder block":
         # The input is concatenated with corresponding residual input + transformed for doubled resolution
         if up:
-            self.conv1 = nn.Conv2d(2*in_ch, out_ch, kernel_size=3, padding=1)
+            self.conv1 = nn.Conv2d(2 * in_ch, out_ch, kernel_size=3, padding=1)
             self.transform = nn.ConvTranspose2d(out_ch, out_ch, kernel_size=4, stride=2, padding=1)
         # "Encoder block":
         # The input is convolutioned two times with halved resolution
@@ -58,7 +41,7 @@ class Block(nn.Module):
         # Passing time information of input through the time mlp for transforming and relu activation
         time_emb = self.relu(self.time_mlp(t))
         # Extended last 2 dimension of the time_emb
-        time_emb = time_emb[(..., ) + (None, ) * 2]
+        time_emb = time_emb[(...,) + (None,) * 2]
         # Add time channels
         h = h + time_emb
         # Second Conv.
@@ -66,9 +49,10 @@ class Block(nn.Module):
         # En- or decode
         return self.transform(h)
 
+
 """
     First and simple UNet structure for testing the pipeline and model (will later be updated and modified)
-    
+
     At this point the UNet Structure has 3 levels. For channel sized see following attributes.
 """
 class SimpleUNet(nn.Module):
@@ -85,7 +69,7 @@ class SimpleUNet(nn.Module):
 
         # Time embedding
         self.time_mlp = nn.Sequential(
-            SinusoidalPositionEmbedding(time_emb_dim),
+            time_embedding.SinusoidalPositionEmbedding(time_emb_dim),
             nn.Linear(time_emb_dim, time_emb_dim),
             nn.ReLU()
         )
@@ -94,11 +78,11 @@ class SimpleUNet(nn.Module):
         self.input = nn.Conv2d(input_channels, encoder_channels[0], kernel_size=3, padding=1)
 
         # Encoder Part
-        self.encoder = nn.ModuleList([Block(encoder_channels[i], encoder_channels[i+1],
+        self.encoder = nn.ModuleList([Block(encoder_channels[i], encoder_channels[i + 1],
                                             time_emb_dim)
-                                      for i in range(len(encoder_channels)-1)])
+                                      for i in range(len(encoder_channels) - 1)])
         # Decoder Part
-        self.decoder = nn.ModuleList([Block(decoder_channels[i], decoder_channels[i+1],
+        self.decoder = nn.ModuleList([Block(decoder_channels[i], decoder_channels[i + 1],
                                             time_emb_dim, up=True)
                                       for i in range(len(decoder_channels) - 1)])
 
@@ -127,5 +111,3 @@ class SimpleUNet(nn.Module):
 
 model = SimpleUNet()
 print("Num params: ", sum(p.numel() for p in model.parameters()))
-
-
