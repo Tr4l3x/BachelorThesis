@@ -1,12 +1,10 @@
-import numpy as np
 import matplotlib.pyplot as plt
-import PlaygroundForMIR.model.dataset
-from forward_process import *
-import dataset
+from project.forward_process import *
+import project.dataset as dataset
 import torch
 
 #  For manual tests and visualizations
-test_set = PlaygroundForMIR.model.dataset.get_dataset()
+test_set = dataset.get_dataset()
 test_sample = test_set.piano_rolls[0]
 
 # Plotting some examples

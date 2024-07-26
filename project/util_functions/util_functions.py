@@ -1,5 +1,5 @@
 import math
-import dataset
+import project.dataset as dataset
 import pretty_midi
 import torch
 

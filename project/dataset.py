@@ -4,6 +4,7 @@ import csv
 import torch
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
+from collections import Counter
 
 class WeimarJazzDataset():
     """
@@ -23,7 +24,8 @@ class WeimarJazzDataset():
             piano_rolls (2D list): List with all piano-roll representations of sample i at index [i]
             num_of_rolls (int): Total number of piano rolls (bars) after preprocessing the dataset
     """
-    def __init__(self, path_to_csv):
+    def __init__(self, path_to_csv, device):
+        self.device = device
         # Saving the source path for possible lookups
         self.csv_path = path_to_csv
         # Saving all valid samples names and their note tuples
@@ -201,7 +203,7 @@ class WeimarJazzDataset():
 
             # Marking the current note in the piano roll
             piano_roll[note_pitch, note_onset:note_offset] = note_pitch
-        piano_roll_tensor = torch.from_numpy(piano_roll)
+        piano_roll_tensor = torch.tensor(piano_roll).to(self.device)
         return piano_roll_tensor
 
     def get_min_max_pitches(self, notes):
@@ -251,9 +253,8 @@ class WeimarJazzDataset():
             reduced_piano_rolls.append(current_sample)
         return reduced_piano_rolls
 
-
-def get_dataset():
-    dataset = WeimarJazzDataset('midi\weimarjazz.csv')
+def get_dataset(device="cpu"):
+    dataset = WeimarJazzDataset(path_to_csv='csv\weimarjazz.csv', device=device)
     return dataset
 
 " Converting a list of given samples into a tensor"
@@ -298,15 +299,30 @@ def get_dataloader():
     dataloader = DataLoader(dataset, batch_size=32, shuffle=True, num_workers=0)
     return dataloader
 
-### Test case
-#data = get_dataset()
-#all_chords = set()
-#for sample in data.notes_of_each_sample:
-#    for note in sample:
-#        all_chords.add(note[-1])
-#all_chords = set(all_chords)
-#sorted_list = sorted(all_chords, key=lambda x: x[0])
-#print(sorted_list)
+def partition_by_initial(strings):
+    """
+        Erstellt eine Partition der Liste 'strings', wobei jede Partitionsmenge
+        mit demselben Anfangsbuchstaben beginnt.
 
-# Notation besser verstehen
-# https://jazzomat.hfm-weimar.de/melospy/annotations.html?highlight=notation
+        param:
+         strings: Liste von Strings, die partitioniert werden sollen
+        return:
+         Ein Wörterbuch, bei dem die Schlüssel die Anfangsbuchstaben sind und die Werte Listen von Strings
+    """
+    partitions = {}
+    for s in strings:
+        if s:  # Ignoriere leere Strings
+            initial = s[0]
+            if initial not in partitions:
+                partitions[initial] = []
+            partitions[initial].append(s)
+    return partitions
+
+
+
+
+
+
+
+
+
